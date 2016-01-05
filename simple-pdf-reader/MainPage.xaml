@@ -8,6 +8,7 @@
     mc:Ignorable="d">
 
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
-        <Image x:Name="PdfViewArea" HorizontalAlignment="Left" Height="950" Margin="0,10,0,0" VerticalAlignment="Top" Width="1440"/>
+        <Image x:Name="CurrentPdfPageArea" HorizontalAlignment="Left" Height="950" Margin="0,10,0,0" VerticalAlignment="Top" Width="640"/>
+        <Image x:Name="SiblingPdfPageArea" HorizontalAlignment="Left" Height="892" Margin="723,0,0,0" VerticalAlignment="Top" Width="652"/>
     </Grid>
 </Page>
