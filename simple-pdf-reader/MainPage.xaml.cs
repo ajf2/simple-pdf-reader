@@ -12,6 +12,7 @@ using Windows.Foundation.Collections;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
+using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -29,9 +30,13 @@ namespace simple_pdf_reader {
     /// </summary>
     public sealed partial class MainPage : Page {
         private PdfDocument pdf;
+        private uint currentPage;
 
         public MainPage() {
             this.InitializeComponent();
+
+            ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.FullScreen;
+            
             PickFileAndDisplayPdf();
         }
 
@@ -46,11 +51,37 @@ namespace simple_pdf_reader {
 
             try {
                 pdf = await PdfDocument.LoadFromFileAsync(file);
-                DisplayPdfPageAndSibling();
+                DisplayPdfPageAndPrevious();
             } catch(Exception) {
                 // Restart the function if the chosen file can't be read.
                 PickFileAndDisplayPdf();
             }
+        }
+
+        private void DisplayPdfPageAndPrevious(uint pageToLoad = 10) {
+            using(PdfPage page = pdf.GetPage(pageToLoad)) {
+                RenderPdfPageToImageAsync(page, SiblingPdfPageArea);
+            }
+            using(PdfPage prevPage = GetPreviousPdfPage(pageToLoad)) {
+                if(prevPage != null) {
+                    RenderPdfPageToImageAsync(prevPage, CurrentPdfPageArea);
+                }
+            }
+        }
+
+        private async void RenderPdfPageToImageAsync(PdfPage page, Image image) {
+            var stream = new InMemoryRandomAccessStream();
+            await page.RenderToStreamAsync(stream);
+            BitmapImage src = new BitmapImage();
+            image.Source = src;
+            await src.SetSourceAsync(stream);
+        }
+
+        private PdfPage GetPreviousPdfPage(uint currentPage) {
+            if(currentPage > 0) {
+                return pdf.GetPage(currentPage - 1);
+            }
+            return null;
         }
 
         /// <summary>
@@ -142,6 +173,26 @@ namespace simple_pdf_reader {
                 return PdfPageOrientation.Square;
             }
             return width > height ? PdfPageOrientation.Landscape : PdfPageOrientation.Portrait;
+        }
+
+        private void button_Click(object sender, RoutedEventArgs e) {
+            CurrentPdfPageArea.Width = this.Width / 2;
+            CurrentPdfPageArea.Height = this.Height;
+            CurrentPdfPageArea.HorizontalAlignment = HorizontalAlignment.Left;
+
+            SiblingPdfPageArea.Width = this.Width / 2;
+            SiblingPdfPageArea.Height = this.Height;
+            SiblingPdfPageArea.HorizontalAlignment = HorizontalAlignment.Right;
+        }
+
+        private void prevButt_Click(object sender, RoutedEventArgs e) {
+            currentPage--;
+            DisplayPdfPageAndPrevious(currentPage);
+        }
+
+        private void nextButt_Click(object sender, RoutedEventArgs e) {
+            currentPage++;
+            DisplayPdfPageAndPrevious(currentPage);
         }
     }
 }

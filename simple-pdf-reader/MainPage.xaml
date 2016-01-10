@@ -10,5 +10,8 @@
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <Image x:Name="CurrentPdfPageArea" HorizontalAlignment="Left" Height="950" Margin="0,10,0,0" VerticalAlignment="Top" Width="640"/>
         <Image x:Name="SiblingPdfPageArea" HorizontalAlignment="Left" Height="892" Margin="723,0,0,0" VerticalAlignment="Top" Width="652"/>
+        <Button x:Name="button" Content="Button" HorizontalAlignment="Left" Margin="333,892,0,0" VerticalAlignment="Top" Click="button_Click"/>
+        <Button x:Name="nextButt" Content="Button" HorizontalAlignment="Left" Margin="493,892,0,0" VerticalAlignment="Top" Click="nextButt_Click"/>
+        <Button x:Name="prevButt" Content="Button" HorizontalAlignment="Left" Margin="197,892,0,0" VerticalAlignment="Top" Click="prevButt_Click"/>
     </Grid>
 </Page>
