@@ -12,6 +12,7 @@ using Windows.Foundation.Collections;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
+using Windows.UI.Input;
 using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -32,12 +33,87 @@ namespace simple_pdf_reader {
         private PdfDocument pdf;
         private uint currentPage;
 
+        private TransformGroup transforms;
+        private MatrixTransform previousTransform;
+        private CompositeTransform deltaTransform;
+        private bool forceManipulationsToEnd;
+
         public MainPage() {
             this.InitializeComponent();
 
-            ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.FullScreen;
+            //ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.FullScreen;
             
             PickFileAndDisplayPdf();
+            
+
+            // Initialize the transforms that will be used to manipulate the shape
+            InitManipulationTransforms();
+
+            // Register for the various manipulation events that will occur on the shape
+            CurrentPdfPageArea.ManipulationStarted += new ManipulationStartedEventHandler(ManipulateMe_ManipulationStarted);
+            CurrentPdfPageArea.ManipulationDelta += new ManipulationDeltaEventHandler(ManipulateMe_ManipulationDelta);
+            CurrentPdfPageArea.ManipulationCompleted += new ManipulationCompletedEventHandler(ManipulateMe_ManipulationCompleted);
+            CurrentPdfPageArea.ManipulationInertiaStarting += new ManipulationInertiaStartingEventHandler(ManipulateMe_ManipulationInertiaStarting);
+
+            // The ManipulationMode property dictates what manipulation events the element
+            // will listen to.  This will set it to a limited subset of these events.
+            CurrentPdfPageArea.ManipulationMode =
+                ManipulationModes.TranslateX |
+                ManipulationModes.TranslateY |
+                ManipulationModes.Rotate |
+                ManipulationModes.TranslateInertia |
+                ManipulationModes.RotateInertia;
+        }
+        
+        // When a manipulation begins, change the color of the object to reflect
+        // that a manipulation is in progress
+        void ManipulateMe_ManipulationStarted(object sender, ManipulationStartedRoutedEventArgs e) {
+            forceManipulationsToEnd = false;
+        }
+
+        // Process the change resulting from a manipulation
+        void ManipulateMe_ManipulationDelta(object sender, ManipulationDeltaRoutedEventArgs e) {
+            // If the reset button has been pressed, mark the manipulation as completed
+            if(forceManipulationsToEnd) {
+                e.Complete();
+                return;
+            }
+
+            previousTransform.Matrix = transforms.Value;
+
+            // Get center point for rotation
+            Point center = previousTransform.TransformPoint(new Point(e.Position.X, e.Position.Y));
+            deltaTransform.CenterX = center.X;
+            deltaTransform.CenterY = center.Y;
+
+            // Look at the Delta property of the ManipulationDeltaRoutedEventArgs to retrieve
+            // the rotation, scale, X, and Y changes
+            deltaTransform.Rotation = e.Delta.Rotation;
+            deltaTransform.TranslateX = e.Delta.Translation.X;
+            deltaTransform.TranslateY = e.Delta.Translation.Y;
+        }
+
+        // When a manipulation that's a result of inertia begins, change the color of the
+        // the object to reflect that inertia has taken over
+        void ManipulateMe_ManipulationInertiaStarting(object sender, ManipulationInertiaStartingRoutedEventArgs e) {
+            //manipulateMe.Background = new SolidColorBrush(Windows.UI.Colors.RoyalBlue);
+        }
+
+        // When a manipulation has finished, reset the color of the object
+        void ManipulateMe_ManipulationCompleted(object sender, ManipulationCompletedRoutedEventArgs e) {
+            //manipulateMe.Background = new SolidColorBrush(Windows.UI.Colors.LightGray);
+        }
+
+        private void InitManipulationTransforms() {
+            transforms = new TransformGroup();
+            previousTransform = new MatrixTransform() { Matrix = Matrix.Identity };
+            deltaTransform = new CompositeTransform();
+
+            transforms.Children.Add(previousTransform);
+            transforms.Children.Add(deltaTransform);
+
+            // Set the render transform on the rect
+            CurrentPdfPageArea.RenderTransform = transforms;
         }
 
         /// <summary>
