@@ -88,9 +88,7 @@ namespace simple_pdf_reader {
 
             // Look at the Delta property of the ManipulationDeltaRoutedEventArgs to retrieve
             // the rotation, scale, X, and Y changes
-            deltaTransform.Rotation = e.Delta.Rotation;
             deltaTransform.TranslateX = e.Delta.Translation.X;
-            deltaTransform.TranslateY = e.Delta.Translation.Y;
         }
 
         // When a manipulation that's a result of inertia begins, change the color of the
