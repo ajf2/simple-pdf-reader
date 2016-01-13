@@ -59,10 +59,7 @@ namespace simple_pdf_reader {
             // will listen to.  This will set it to a limited subset of these events.
             CurrentPdfPageArea.ManipulationMode =
                 ManipulationModes.TranslateX |
-                ManipulationModes.TranslateY |
-                ManipulationModes.Rotate |
-                ManipulationModes.TranslateInertia |
-                ManipulationModes.RotateInertia;
+                ManipulationModes.TranslateInertia;
         }
         
         // When a manipulation begins, change the color of the object to reflect
@@ -81,14 +78,11 @@ namespace simple_pdf_reader {
 
             previousTransform.Matrix = transforms.Value;
 
-            // Get center point for rotation
-            Point center = previousTransform.TransformPoint(new Point(e.Position.X, e.Position.Y));
-            deltaTransform.CenterX = center.X;
-            deltaTransform.CenterY = center.Y;
 
             // Look at the Delta property of the ManipulationDeltaRoutedEventArgs to retrieve
             // the rotation, scale, X, and Y changes
-            deltaTransform.TranslateX = e.Delta.Translation.X;
+            double weight = 4;
+            deltaTransform.TranslateX = e.Delta.Translation.X / weight;
         }
 
         // When a manipulation that's a result of inertia begins, change the color of the
