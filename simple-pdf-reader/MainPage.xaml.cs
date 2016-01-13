@@ -114,6 +114,7 @@ namespace simple_pdf_reader {
 
             // Set the render transform on the rect
             CurrentPdfPageArea.RenderTransform = transforms;
+            SiblingPdfPageArea.RenderTransform = transforms;
         }
 
         /// <summary>
