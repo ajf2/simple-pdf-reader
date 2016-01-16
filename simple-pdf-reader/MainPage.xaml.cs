@@ -33,80 +33,10 @@ namespace simple_pdf_reader {
         private PdfDocument pdf;
         private uint currentPage;
 
-        private TransformGroup transforms;
-        private MatrixTransform previousTransform;
-        private CompositeTransform deltaTransform;
-        private bool forceManipulationsToEnd;
-
         public MainPage() {
             this.InitializeComponent();
-
-            //ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.FullScreen;
             
             PickFileAndDisplayPdf();
-            
-
-            // Initialize the transforms that will be used to manipulate the shape
-            InitManipulationTransforms();
-
-            // Register for the various manipulation events that will occur on the shape
-            CurrentPdfPageArea.ManipulationStarted += new ManipulationStartedEventHandler(ManipulateMe_ManipulationStarted);
-            CurrentPdfPageArea.ManipulationDelta += new ManipulationDeltaEventHandler(ManipulateMe_ManipulationDelta);
-            CurrentPdfPageArea.ManipulationCompleted += new ManipulationCompletedEventHandler(ManipulateMe_ManipulationCompleted);
-            CurrentPdfPageArea.ManipulationInertiaStarting += new ManipulationInertiaStartingEventHandler(ManipulateMe_ManipulationInertiaStarting);
-
-            // The ManipulationMode property dictates what manipulation events the element
-            // will listen to.  This will set it to a limited subset of these events.
-            CurrentPdfPageArea.ManipulationMode =
-                ManipulationModes.TranslateX |
-                ManipulationModes.TranslateInertia;
-        }
-        
-        // When a manipulation begins, change the color of the object to reflect
-        // that a manipulation is in progress
-        void ManipulateMe_ManipulationStarted(object sender, ManipulationStartedRoutedEventArgs e) {
-            forceManipulationsToEnd = false;
-        }
-
-        // Process the change resulting from a manipulation
-        void ManipulateMe_ManipulationDelta(object sender, ManipulationDeltaRoutedEventArgs e) {
-            // If the reset button has been pressed, mark the manipulation as completed
-            if(forceManipulationsToEnd) {
-                e.Complete();
-                return;
-            }
-
-            previousTransform.Matrix = transforms.Value;
-
-
-            // Look at the Delta property of the ManipulationDeltaRoutedEventArgs to retrieve
-            // the rotation, scale, X, and Y changes
-            double weight = 4;
-            deltaTransform.TranslateX = e.Delta.Translation.X / weight;
-        }
-
-        // When a manipulation that's a result of inertia begins, change the color of the
-        // the object to reflect that inertia has taken over
-        void ManipulateMe_ManipulationInertiaStarting(object sender, ManipulationInertiaStartingRoutedEventArgs e) {
-            //manipulateMe.Background = new SolidColorBrush(Windows.UI.Colors.RoyalBlue);
-        }
-
-        // When a manipulation has finished, reset the color of the object
-        void ManipulateMe_ManipulationCompleted(object sender, ManipulationCompletedRoutedEventArgs e) {
-            //manipulateMe.Background = new SolidColorBrush(Windows.UI.Colors.LightGray);
-        }
-
-        private void InitManipulationTransforms() {
-            transforms = new TransformGroup();
-            previousTransform = new MatrixTransform() { Matrix = Matrix.Identity };
-            deltaTransform = new CompositeTransform();
-
-            transforms.Children.Add(previousTransform);
-            transforms.Children.Add(deltaTransform);
-
-            // Set the render transform on the rect
-            CurrentPdfPageArea.RenderTransform = transforms;
-            SiblingPdfPageArea.RenderTransform = transforms;
         }
 
         /// <summary>
@@ -120,20 +50,21 @@ namespace simple_pdf_reader {
 
             try {
                 pdf = await PdfDocument.LoadFromFileAsync(file);
-                DisplayPdfPageAndPrevious();
+                LoadAllPdfPagesInFlipViewAsync();
             } catch(Exception) {
                 // Restart the function if the chosen file can't be read.
                 PickFileAndDisplayPdf();
             }
         }
 
-        private void DisplayPdfPageAndPrevious(uint pageToLoad = 10) {
-            using(PdfPage page = pdf.GetPage(pageToLoad)) {
-                RenderPdfPageToImageAsync(page, SiblingPdfPageArea);
-            }
-            using(PdfPage prevPage = GetPreviousPdfPage(pageToLoad)) {
-                if(prevPage != null) {
-                    RenderPdfPageToImageAsync(prevPage, CurrentPdfPageArea);
+        private void LoadAllPdfPagesInFlipViewAsync() {
+            for(uint i = 0; i < pdf.PageCount; i++) {
+                using(PdfPage page = pdf.GetPage(i)) {
+                    Image image = new Image();
+                    RenderPdfPageToImageAsync(page, image);
+                    if(GetPageOrientation(page) == PdfPageOrientation.Portrait) {
+                    }
+                    flipView.Items.Add(image);
                 }
             }
         }
@@ -151,45 +82,6 @@ namespace simple_pdf_reader {
                 return pdf.GetPage(currentPage - 1);
             }
             return null;
-        }
-
-        /// <summary>
-        /// Display a page of the current PDF document.
-        /// </summary>
-        /// <param name="pageToLoad">The page index to load, 0 by default.</param>
-        private async void DisplaySinglePdfPage(uint pageToLoad = 0) {
-            using(PdfPage page = pdf.GetPage(pageToLoad)) {
-                Debug.WriteLine(GetPageOrientation(page));
-                var stream = new InMemoryRandomAccessStream();
-                await page.RenderToStreamAsync(stream);
-
-                BitmapImage src = new BitmapImage();
-                CurrentPdfPageArea.Source = src;
-                await src.SetSourceAsync(stream);
-            }
-        }
-
-        /// <summary>
-        /// Display two pages of the current PDF document.
-        /// </summary>
-        /// <param name="pageToLoad">The page index to load, 0 by default.</param>
-        private async void DisplayPdfPageAndSibling(uint pageToLoad = 50) {
-            using(PdfPage page = pdf.GetPage(pageToLoad)) {
-                PdfPage sibling = GetSiblingPage(page);
-                Debug.WriteLine(GetPageOrientation(page));
-                var streamLeft = new InMemoryRandomAccessStream();
-                var streamRight = new InMemoryRandomAccessStream();
-                await page.RenderToStreamAsync(streamLeft);
-
-                BitmapImage srcLeft = new BitmapImage();
-                BitmapImage srcRight = new BitmapImage();
-                CurrentPdfPageArea.Source = srcLeft;
-                await srcLeft.SetSourceAsync(streamLeft);
-
-                await sibling.RenderToStreamAsync(streamRight);
-                SiblingPdfPageArea.Source = srcRight;
-                await srcRight.SetSourceAsync(streamRight);
-            }
         }
 
         /// <summary>
@@ -242,26 +134,6 @@ namespace simple_pdf_reader {
                 return PdfPageOrientation.Square;
             }
             return width > height ? PdfPageOrientation.Landscape : PdfPageOrientation.Portrait;
-        }
-
-        private void button_Click(object sender, RoutedEventArgs e) {
-            CurrentPdfPageArea.Width = this.Width / 2;
-            CurrentPdfPageArea.Height = this.Height;
-            CurrentPdfPageArea.HorizontalAlignment = HorizontalAlignment.Left;
-
-            SiblingPdfPageArea.Width = this.Width / 2;
-            SiblingPdfPageArea.Height = this.Height;
-            SiblingPdfPageArea.HorizontalAlignment = HorizontalAlignment.Right;
-        }
-
-        private void prevButt_Click(object sender, RoutedEventArgs e) {
-            currentPage--;
-            DisplayPdfPageAndPrevious(currentPage);
-        }
-
-        private void nextButt_Click(object sender, RoutedEventArgs e) {
-            currentPage++;
-            DisplayPdfPageAndPrevious(currentPage);
         }
     }
 }
