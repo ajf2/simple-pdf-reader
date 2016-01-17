@@ -32,10 +32,11 @@ namespace simple_pdf_reader {
     public sealed partial class MainPage : Page {
         private PdfDocument pdf;
         private uint currentPage;
+        private ApplicationDataContainer localSettings = ApplicationData.Current.LocalSettings;
 
         public MainPage() {
             this.InitializeComponent();
-            
+
             PickFileAndDisplayPdf();
         }
 
@@ -50,14 +51,21 @@ namespace simple_pdf_reader {
 
             try {
                 pdf = await PdfDocument.LoadFromFileAsync(file);
-                LoadAllPdfPagesInFlipViewAsync();
-            } catch(Exception) {
+                currentPage = (uint)localSettings.Values["savedPage"];
+                LoadAllPdfPagesInFlipView(currentPage);
+            } catch(Exception ex) {
                 // Restart the function if the chosen file can't be read.
                 PickFileAndDisplayPdf();
             }
         }
 
-        private void LoadAllPdfPagesInFlipViewAsync() {
+        private void flipView_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            var page = ((uint)((FlipView)sender).SelectedIndex + 1);
+            localSettings.Values["savedPage"] = page;
+        }
+
+        private void LoadAllPdfPagesInFlipView(uint pageToDisplay) {
+            flipView.SelectionChanged += null;
             for(uint i = 0; i < pdf.PageCount; i++) {
                 using(PdfPage page = pdf.GetPage(i)) {
                     Image image = new Image();
@@ -67,6 +75,10 @@ namespace simple_pdf_reader {
                     flipView.Items.Add(image);
                 }
             }
+            if(pageToDisplay <= pdf.PageCount) {
+                flipView.SelectedIndex = (int)pageToDisplay - 1;
+            }
+            flipView.SelectionChanged += flipView_SelectionChanged;
         }
 
         private async void RenderPdfPageToImageAsync(PdfPage page, Image image) {
