@@ -37,7 +37,19 @@ namespace simple_pdf_reader {
         public MainPage() {
             this.InitializeComponent();
 
+            LoadSavedData();
             PickFileAndDisplayPdf();
+        }
+
+        /// <summary>
+        /// Load data saved in the past.
+        /// </summary>
+        private void LoadSavedData() {
+            try {
+                currentPage = (uint)localSettings.Values["savedPage"];
+            } catch(Exception ex) when(ex is NullReferenceException || ex is InvalidCastException) {
+                currentPage = 1;
+            }
         }
 
         /// <summary>
@@ -51,7 +63,6 @@ namespace simple_pdf_reader {
 
             try {
                 pdf = await PdfDocument.LoadFromFileAsync(file);
-                currentPage = (uint)localSettings.Values["savedPage"];
                 LoadAllPdfPagesInFlipView(currentPage);
             } catch(Exception ex) {
                 // Restart the function if the chosen file can't be read.
@@ -120,7 +131,7 @@ namespace simple_pdf_reader {
             }
 
             PdfPageOrientation currentPageOrientation = GetPageOrientation(currentPage);
-            
+
             if(previousPage == null) {
                 return (currentPageOrientation == GetPageOrientation(nextPage)) || GetPageOrientation(nextPage) == PdfPageOrientation.Square ? nextPage : null;
             } else if((currentPageOrientation == GetPageOrientation(previousPage)) || GetPageOrientation(previousPage) == PdfPageOrientation.Square) {
