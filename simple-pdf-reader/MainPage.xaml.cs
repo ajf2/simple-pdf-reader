@@ -75,19 +75,99 @@ namespace simple_pdf_reader {
             localSettings.Values["savedPage"] = page;
         }
 
+        private IEnumerable<int> FanSort(IEnumerable<int> things, int index) {
+            if(index < 0 || index >= things.Count()) {
+                throw new ArgumentOutOfRangeException("index", "Parameter index is not within the range of items in the collection.");
+            }
+
+            List<int> oldList = things.ToList();
+            List<int> newList = new List<int>(things.Count());
+            newList.Add(oldList[index]);
+            int numOfItemsToAdd = 1;
+            int pincrementReached = 1;
+            int nincrementReached = 1;
+            while(newList.Count < oldList.Count) {
+                for(int i = 0; i < numOfItemsToAdd; i++) {
+                    if(index + pincrementReached < oldList.Count) {
+                        newList.Add(oldList[index + pincrementReached]);
+                        pincrementReached++;
+                    } else {
+                        break;
+                    }
+                }
+                for(int i = 0; i < numOfItemsToAdd; i++) {
+                    if(index - nincrementReached >= 0) {
+                        newList.Add(oldList[index - nincrementReached]);
+                        nincrementReached++;
+                    } else {
+                        break;
+                    }
+                }
+                numOfItemsToAdd++;
+            }
+            return newList.AsEnumerable();
+        }
+
         private void LoadAllPdfPagesInFlipView(uint pageToDisplay) {
             flipView.SelectionChanged += null;
+
+
+
+            List<int> indices = new List<int>((int)pdf.PageCount);
+            for(int i = 0; i < pdf.PageCount; i++) {
+                indices.Add(i);
+            }
+            indices = FanSort(indices, (int)currentPage).ToList();
+
+
+
+
+
+
+
+
+            // Initialise the FlipView with Image objects.
             for(uint i = 0; i < pdf.PageCount; i++) {
-                using(PdfPage page = pdf.GetPage(i)) {
-                    Image image = new Image();
-                    RenderPdfPageToImageAsync(page, image);
-                    if(GetPageOrientation(page) == PdfPageOrientation.Portrait) {
+                flipView.Items.Add(new Image());
+                //if(i + 1 == pageToDisplay) {
+                    
+                //} else {
+                //    flipView.Items.Add(new Image());
+                //}
+            }
+
+
+
+
+            for(int i = 0; i < indices.Count; i++) {
+                
+                    using(PdfPage page = pdf.GetPage((uint)indices[i])) {
+                        RenderPdfPageToImageAsync(page, (Image)flipView.Items[indices[i]]);
                     }
-                    flipView.Items.Add(image);
-                }
+                
+            }
+
+
+
+
+
+            using(PdfPage page = pdf.GetPage(pageToDisplay - 1)) {
+                //Image image = new Image();
+                RenderPdfPageToImageAsync(page, (Image)flipView.Items[(int)pageToDisplay - 1]);
+                //if(GetPageOrientation(page) == PdfPageOrientation.Portrait) {
+                //}
+                //flipView.Items.Add(image);
             }
             if(pageToDisplay <= pdf.PageCount) {
                 flipView.SelectedIndex = (int)pageToDisplay - 1;
+            }
+            for(uint i = 0; i < pdf.PageCount; i++) {
+                if(i + 1 != pageToDisplay) {
+                    using(PdfPage page = pdf.GetPage(i)) {
+                        Image image = new Image();
+                        RenderPdfPageToImageAsync(page, (Image)flipView.Items[(int)i]);
+                    } 
+                }
             }
             flipView.SelectionChanged += flipView_SelectionChanged;
         }
