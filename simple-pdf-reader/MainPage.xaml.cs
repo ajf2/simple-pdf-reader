@@ -60,6 +60,10 @@ namespace simple_pdf_reader {
             var picker = new FileOpenPicker();
             picker.FileTypeFilter.Add(".pdf");
             StorageFile file = await picker.PickSingleFileAsync();
+            if(file == null) {
+                Application.Current.Exit();
+                return;
+            }
 
             try {
                 pdf = await PdfDocument.LoadFromFileAsync(file);
