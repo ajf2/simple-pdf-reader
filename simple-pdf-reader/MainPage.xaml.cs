@@ -74,18 +74,31 @@ namespace simple_pdf_reader {
             }
         }
 
+        /// <summary>
+        /// Save the current page number every time a page is turned.
+        /// </summary>
+        /// <param name="sender">The FlipView object that triggered this event.</param>
+        /// <param name="e">The event's arguments.</param>
         private void flipView_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             var page = ((uint)((FlipView)sender).SelectedIndex + 1);
             localSettings.Values["savedPage"] = page;
         }
 
-        private IEnumerable<int> FanSort(IEnumerable<int> things, int index) {
-            if(index < 0 || index >= things.Count()) {
+        /// <summary>
+        /// Sort an IEnumerable collection of ints starting with the item specified by index,
+        /// going forward one, back one from index, then the next two forwards, the next two backwards etc.
+        /// This is used to load the current page first followed by the pages most likely to be switched to next.
+        /// </summary>
+        /// <param name="collection">The IEnumerable collection to sort.</param>
+        /// <param name="index">The index of the collection to put at the front of the list.</param>
+        /// <returns></returns>
+        private IEnumerable<int> FanSort(IEnumerable<int> collection, int index) {
+            if(index < 0 || index >= collection.Count()) {
                 throw new ArgumentOutOfRangeException("index", "Parameter index is not within the range of items in the collection.");
             }
 
-            List<int> oldList = things.ToList();
-            List<int> newList = new List<int>(things.Count());
+            List<int> oldList = collection.ToList();
+            List<int> newList = new List<int>(collection.Count());
             newList.Add(oldList[index]);
             int numOfItemsToAdd = 1;
             int pincrementReached = 1;
@@ -113,66 +126,35 @@ namespace simple_pdf_reader {
         }
 
         private void LoadAllPdfPagesInFlipView(uint pageToDisplay) {
+            // Disable the page change event.
             flipView.SelectionChanged += null;
 
-
-
+            // Get the pages indices into a list.
             List<int> indices = new List<int>((int)pdf.PageCount);
             for(int i = 0; i < pdf.PageCount; i++) {
                 indices.Add(i);
             }
+            // Sort the indices in the order we want pages to be displayed.
             indices = FanSort(indices, (int)currentPage).ToList();
-
-
-
-
-
-
-
 
             // Initialise the FlipView with Image objects.
             for(uint i = 0; i < pdf.PageCount; i++) {
                 flipView.Items.Add(new Image());
-                //if(i + 1 == pageToDisplay) {
-                    
-                //} else {
-                //    flipView.Items.Add(new Image());
-                //}
             }
 
-
-
-
+            // Start rendering the images.
             for(int i = 0; i < indices.Count; i++) {
-                
-                    using(PdfPage page = pdf.GetPage((uint)indices[i])) {
-                        RenderPdfPageToImageAsync(page, (Image)flipView.Items[indices[i]]);
-                    }
-                
+                using(PdfPage page = pdf.GetPage((uint)indices[i])) {
+                    RenderPdfPageToImageAsync(page, (Image)flipView.Items[indices[i]]);
+                }
             }
 
-
-
-
-
-            using(PdfPage page = pdf.GetPage(pageToDisplay - 1)) {
-                //Image image = new Image();
-                RenderPdfPageToImageAsync(page, (Image)flipView.Items[(int)pageToDisplay - 1]);
-                //if(GetPageOrientation(page) == PdfPageOrientation.Portrait) {
-                //}
-                //flipView.Items.Add(image);
-            }
+            // Set the currently viewed page.
             if(pageToDisplay <= pdf.PageCount) {
                 flipView.SelectedIndex = (int)pageToDisplay - 1;
             }
-            for(uint i = 0; i < pdf.PageCount; i++) {
-                if(i + 1 != pageToDisplay) {
-                    using(PdfPage page = pdf.GetPage(i)) {
-                        Image image = new Image();
-                        RenderPdfPageToImageAsync(page, (Image)flipView.Items[(int)i]);
-                    } 
-                }
-            }
+
+            // Enable the page change event.
             flipView.SelectionChanged += flipView_SelectionChanged;
         }
 
