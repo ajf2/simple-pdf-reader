@@ -7,6 +7,7 @@ using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.System.Display;
 using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -21,8 +22,12 @@ namespace simple_pdf_reader
     /// <summary>
     /// Provides application-specific behavior to supplement the default Application class.
     /// </summary>
-    sealed partial class App : Application
-    {
+    sealed partial class App : Application {
+        /// <summary>
+        /// Keeps track of whether to keep the screen on.
+        /// </summary>
+        private DisplayRequest displayRequest;
+
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
         /// executed, and as such is the logical equivalent of main() or WinMain().
@@ -31,6 +36,7 @@ namespace simple_pdf_reader
         {
             this.InitializeComponent();
             this.Suspending += OnSuspending;
+            this.Resuming += OnResuming;
             ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.FullScreen;
         }
 
@@ -78,6 +84,7 @@ namespace simple_pdf_reader
             }
             // Ensure the current window is active
             Window.Current.Activate();
+            KeepScreenOn();
         }
 
         /// <summary>
@@ -101,7 +108,29 @@ namespace simple_pdf_reader
         {
             var deferral = e.SuspendingOperation.GetDeferral();
             //TODO: Save application state and stop any background activity
+            if(displayRequest != null) {
+                displayRequest.RequestRelease();
+            }
             deferral.Complete();
+        }
+
+        /// <summary>
+        /// Invoked when an application execution is being resumed. Keeps the screen on.
+        /// </summary>
+        /// <param name="sender">The source of the resume request.</param>
+        /// <param name="e">Details about the resume request.</param>
+        private void OnResuming(object sender, object e) {
+            if(displayRequest != null) {
+                KeepScreenOn();
+            }
+        }
+
+        /// <summary>
+        /// Prevents the screen from dimming and turning off.
+        /// </summary>
+        private void KeepScreenOn() {
+            displayRequest = new DisplayRequest();
+            displayRequest.RequestActive();
         }
     }
 }
